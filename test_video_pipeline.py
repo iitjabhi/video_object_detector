@@ -17,7 +17,7 @@ import argparse
 import sys
 from unittest.mock import Mock, patch, MagicMock
 
-from video_pipeline import VideoProcessor
+from video_pipeline import VideoProcessor, VideoProcessingError
 
 
 class TestArgumentParsing:
@@ -351,6 +351,74 @@ class TestVideoProcessor:
         assert processor2.client_id == "custom"
         assert processor2.num_workers == 4
         assert processor2.skip_similar_frames is False
+
+
+class TestInputValidation:
+    """Test the Phase 1 input validation methods."""
+    
+    def setup_method(self):
+        """Setup test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.processor = VideoProcessor(client_id="validation_test")
+    
+    def teardown_method(self):
+        """Cleanup test fixtures."""
+        shutil.rmtree(self.temp_dir)
+    
+    def test_validate_video_format_invalid_extension(self):
+        """Test that invalid video extensions are rejected."""
+        fake_file = os.path.join(self.temp_dir, "test_file.txt")
+        with open(fake_file, 'w') as f:
+            f.write("not a video")
+        
+        with pytest.raises(VideoProcessingError) as exc_info:
+            self.processor._validate_video_format(fake_file)
+        
+        assert "Unsupported video format" in str(exc_info.value)
+        assert ".txt" in str(exc_info.value)
+    
+    def test_validate_frames_directory_no_images(self):
+        """Test frames directory validation with no images."""
+        frames_dir = os.path.join(self.temp_dir, "empty_frames")
+        os.makedirs(frames_dir)
+        
+        with pytest.raises(VideoProcessingError) as exc_info:
+            self.processor._validate_frames_directory(frames_dir)
+        
+        assert "No valid image files found" in str(exc_info.value)
+    
+    def test_validate_frames_directory_success(self):
+        """Test successful frames directory validation."""
+        frames_dir = os.path.join(self.temp_dir, "frames")
+        os.makedirs(frames_dir)
+        
+        # Create a test image file
+        img_path = os.path.join(frames_dir, "frame_00001.jpg")
+        test_img = np.zeros((100, 100, 3), dtype=np.uint8)
+        cv2.imwrite(img_path, test_img)
+        
+        # This should not raise an exception
+        self.processor._validate_frames_directory(frames_dir)
+    
+    def test_validate_input_path_nonexistent(self):
+        """Test input path validation for non-existent path."""
+        nonexistent_path = os.path.join(self.temp_dir, "nonexistent")
+        
+        with pytest.raises(VideoProcessingError) as exc_info:
+            self.processor._validate_input_path(nonexistent_path)
+        
+        assert "Input path does not exist" in str(exc_info.value)
+    
+    def test_validate_output_directory_success(self):
+        """Test successful output directory validation."""
+        output_dir = os.path.join(self.temp_dir, "output")
+        
+        # This should create the directory and not raise an exception
+        self.processor._validate_output_directory(output_dir)
+        
+        # Verify directory was created
+        assert os.path.exists(output_dir)
+        assert os.path.isdir(output_dir)
 
 
 # Integration test using pytest fixtures

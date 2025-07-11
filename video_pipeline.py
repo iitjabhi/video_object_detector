@@ -27,6 +27,11 @@ except ImportError as e:
     sys.exit(1)
 
 
+class VideoProcessingError(Exception):
+    """Custom exception for video processing validation errors."""
+    pass
+
+
 class VideoProcessor:
     """Video processing pipeline with basic features.
     
@@ -122,6 +127,164 @@ class VideoProcessor:
                     time.sleep(2)  # Wait before retry
                 else:
                     raise Exception(f"Failed to load model after {max_retries} attempts")
+
+    def _validate_video_format(self, video_path):
+        """Validate video file format and codec compatibility."""
+        self.logger.info(f"Validating video format: {video_path}")
+        
+        # Check file extension
+        valid_extensions = ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v']
+        file_ext = os.path.splitext(video_path)[1].lower()
+        
+        if file_ext not in valid_extensions:
+            raise VideoProcessingError(f"Unsupported video format: {file_ext}. Supported formats: {', '.join(valid_extensions)}")
+        
+        # Test video properties with OpenCV
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            raise VideoProcessingError(f"Cannot open video file: {video_path}")
+        
+        try:
+            # Check if video has frames
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            if frame_count <= 0:
+                raise VideoProcessingError(f"Video has no frames: {video_path}")
+            
+            # Check if video has reasonable frame rate
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            if fps <= 0:
+                raise VideoProcessingError(f"Invalid frame rate: {fps}")
+            
+            # Check video dimensions
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            if width <= 0 or height <= 0:
+                raise VideoProcessingError(f"Invalid video dimensions: {width}x{height}")
+            
+            # Test reading the first frame
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                raise VideoProcessingError(f"Cannot read first frame from video: {video_path}")
+            
+            self.logger.info(f"Video validation passed: {frame_count} frames, {fps:.1f} FPS, {width}x{height}")
+            
+        finally:
+            cap.release()
+
+    def _validate_frames_directory(self, frames_dir):
+        """Validate frames directory contains valid image files."""
+        self.logger.info(f"Validating frames directory: {frames_dir}")
+        
+        if not os.path.isdir(frames_dir):
+            raise VideoProcessingError(f"Frames directory does not exist: {frames_dir}")
+        
+        # Check for supported image formats
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif']
+        all_files = os.listdir(frames_dir)
+        image_files = [f for f in all_files 
+                      if any(f.lower().endswith(ext) for ext in valid_extensions)]
+        
+        if not image_files:
+            raise VideoProcessingError(f"No valid image files found in: {frames_dir}. Supported formats: {', '.join(valid_extensions)}")
+        
+        # Test loading a sample image
+        sample_image = os.path.join(frames_dir, image_files[0])
+        try:
+            img = cv2.imread(sample_image)
+            if img is None:
+                raise VideoProcessingError(f"Cannot read sample image: {sample_image}")
+            
+            height, width = img.shape[:2]
+            if height <= 0 or width <= 0:
+                raise VideoProcessingError(f"Invalid image dimensions: {width}x{height}")
+            
+        except Exception as e:
+            raise VideoProcessingError(f"Invalid image format in directory: {e}")
+        
+        self.logger.info(f"Frames directory validation passed: {len(image_files)} images found")
+
+    def _validate_output_directory(self, output_dir):
+        """Validate output directory is writable and has sufficient space."""
+        self.logger.info(f"Validating output directory: {output_dir}")
+        
+        # Create directory if it doesn't exist
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+        except PermissionError:
+            raise VideoProcessingError(f"Cannot create output directory: {output_dir}")
+        
+        # Check write permissions
+        if not os.access(output_dir, os.W_OK):
+            raise VideoProcessingError(f"Output directory not writable: {output_dir}")
+        
+        # Check available disk space (estimate needed space)
+        required_space_mb = 100  # Minimum 100MB
+        try:
+            free_space = shutil.disk_usage(output_dir).free / 1024 / 1024
+            if free_space < required_space_mb:
+                raise VideoProcessingError(f"Insufficient disk space: {free_space:.1f}MB < {required_space_mb}MB")
+        except Exception as e:
+            self.logger.warning(f"Could not check disk space: {e}")
+        
+        self.logger.info(f"Output directory validation passed: {output_dir}")
+
+    def _validate_input_path(self, input_path):
+        """Validate and determine input type (video file or frames directory)."""
+        self.logger.info(f"Validating input path: {input_path}")
+        
+        if not os.path.exists(input_path):
+            raise VideoProcessingError(f"Input path does not exist: {input_path}")
+        
+        if os.path.isfile(input_path):
+            # It's a video file
+            self._validate_video_format(input_path)
+            return "video"
+        elif os.path.isdir(input_path):
+            # It's a frames directory
+            self._validate_frames_directory(input_path)
+            return "frames"
+        else:
+            raise VideoProcessingError(f"Input path is neither file nor directory: {input_path}")
+
+    def _validate_model_name(self, model_name):
+        """Validate YOLO model name."""
+        self.logger.info(f"Validating model name: {model_name}")
+        
+        # Standard YOLO models
+        standard_models = ['yolov8n.pt', 'yolov8s.pt', 'yolov8m.pt', 'yolov8l.pt', 'yolov8x.pt']
+        
+        if model_name not in standard_models:
+            # Check if it's a custom model file
+            if os.path.exists(model_name):
+                self.logger.info(f"Using custom model file: {model_name}")
+            else:
+                self.logger.warning(f"Model not in standard list: {model_name}. Will attempt download.")
+        
+        self.logger.info(f"Model name validation passed: {model_name}")
+
+    def validate_all_inputs(self, input_path, output_dir, model_name):
+        """Perform comprehensive Phase 1 validation."""
+        self.logger.info("Starting comprehensive input validation...")
+        
+        try:
+            # Validate input path and determine type
+            input_type = self._validate_input_path(input_path)
+            
+            # Validate output directory
+            self._validate_output_directory(output_dir)
+            
+            # Validate model name
+            self._validate_model_name(model_name)
+            
+            self.logger.info("All input validation passed successfully!")
+            return input_type
+            
+        except VideoProcessingError as e:
+            self.logger.error(f"Input validation failed: {e}")
+            raise
+        except Exception as e:
+            self.logger.error(f"Unexpected validation error: {e}")
+            raise VideoProcessingError(f"Validation error: {e}")
     
     def extract_frames(self, video_path, output_dir, frame_step=30):
         """Extract frames from video with basic optimization.
@@ -675,18 +838,6 @@ def main():
     
     args = parser.parse_args()
     
-    # Auto-detect if input is video file or frames directory
-    if os.path.isfile(args.input_path):
-        # It's a video file
-        input_type = "video"
-        print(f"Processing video: {args.input_path}")
-    elif os.path.isdir(args.input_path):
-        # It's a frames directory
-        input_type = "frames"
-        print(f"Processing pre-extracted frames from: {args.input_path}")
-    else:
-        parser.error(f"Input path does not exist: {args.input_path}")
-    
     # Create processor
     processor = VideoProcessor(
         client_id=args.client_id,
@@ -695,15 +846,11 @@ def main():
     )
     
     try:
-        if input_type == "frames":
-            # Frame-based processing (fast CI mode)
-            results = processor.process_frames_directory(
-                frames_dir=args.input_path,
-                output_dir=args.output_dir,
-                model_name=args.model
-            )
-            print(f"Results: {results['extracted_images']} frames, {results['total_detections']} detections")
-        else:
+        # Validate inputs and determine input type
+        input_type = processor.validate_all_inputs(args.input_path, args.output_dir, args.model)
+        
+        if input_type == "video":
+            print(f"Processing video: {args.input_path}")
             # Video-based processing
             processor.process_video(
                 video_path=args.input_path,
@@ -711,10 +858,22 @@ def main():
                 model_name=args.model,
                 frame_step=args.frame_step
             )
+        else:
+            print(f"Processing pre-extracted frames from: {args.input_path}")
+            # Frame-based processing (fast CI mode)
+            results = processor.process_frames_directory(
+                frames_dir=args.input_path,
+                output_dir=args.output_dir,
+                model_name=args.model
+            )
+            print(f"Results: {results['extracted_images']} frames, {results['total_detections']} detections")
         
         print("Processing completed successfully!")
         return 0
         
+    except VideoProcessingError as e:
+        print(f"Validation failed: {e}")
+        return 1
     except Exception as e:
         print(f"Processing failed: {e}")
         return 1
