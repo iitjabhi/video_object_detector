@@ -123,7 +123,7 @@ jobs:
     - name: Test Docker container
       run: |
         echo "Testing Docker container..."
-        docker run --rm video-pipeline:ci python -c "
+        docker run --rm --entrypoint python video-pipeline:ci -c "
         import sys
         from video_pipeline import VideoProcessor
         print('Docker container works!')
