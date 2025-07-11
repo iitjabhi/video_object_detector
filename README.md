@@ -20,25 +20,49 @@ Includes CI/CD pipeline with automated testing, dependency management, and golde
 
 ## Quick Start
 
-### 1. Build the Container
-```bash
-chmod +x build.sh
-./build.sh
-```
-
-### 2. Add Your Video
+### 1. Add Your Video
 Put your video file in the `input/` directory:
 ```bash
+mkdir -p input
 cp your_video.mp4 input/
 ```
 
-### 3. Process the Video
+### 2. Run the Processing
 ```bash
 chmod +x run.sh
 ./run.sh your_video.mp4
 ```
 
+The script will automatically:
+- Build the Docker image if needed
+- Create required directories
+- Process your video
+- Save results in the `output/` directory
+
+### 3. Check Results
 Results will be saved in the `output/` directory as `detections.json`.
+
+## The run.sh Script
+
+The `run.sh` script is your main entry point for processing videos. It handles:
+
+- **Automatic Building**: Builds Docker image if it doesn't exist
+- **Directory Setup**: Creates input/, output/, and logs/ directories
+- **Smart Arguments**: Passes all options to the video processor
+- **Error Handling**: Provides clear error messages and colored output
+- **Help System**: Shows usage with `--help` flag
+
+### Script Options
+```bash
+./run.sh [OPTIONS] <video_file>
+
+Options:
+  --build              Build the Docker image first
+  --model <model>      YOLO model to use (default: yolov8n.pt)
+  --frame-step <n>     Process every nth frame (default: 30)
+  --client-id <id>     Client identifier for output organization
+  --help               Show this help message
+```
 
 ## Manual Usage
 
@@ -87,20 +111,23 @@ Options:
 ## Examples
 
 ```bash
-# Basic usage
+# Basic usage - builds image automatically if needed
 ./run.sh my_video.mp4
 
+# Force rebuild of Docker image
+./run.sh --build my_video.mp4
+
 # Use larger model for better accuracy
-./run.sh my_video.mp4 --model yolov8s.pt
+./run.sh --model yolov8s.pt my_video.mp4
 
 # Extract more frames (every 15 frames instead of 30)
-./run.sh my_video.mp4 --frame-step 15
-
-# Use more workers for faster processing
-./run.sh my_video.mp4 --max-workers 4
+./run.sh --frame-step 15 my_video.mp4
 
 # Process for specific client
-./run.sh my_video.mp4 --client-id client123
+./run.sh --client-id client123 my_video.mp4
+
+# Show help
+./run.sh --help
 ```
 
 ## Output
@@ -165,13 +192,12 @@ After processing, find this report in your output directory:
 ```
 simple_video_pipeline/
 ├── video_pipeline.py      # Main processing script
-├── validate_output.py     # Output validation script
+├── validate_ci_output.py  # CI output validation script
 ├── test_video_pipeline.py # Unit tests
 ├── requirements.txt       # Python dependencies
 ├── Dockerfile            # Container definition
 ├── docker-compose.yml    # Docker compose configuration
-├── build.sh             # Build script
-├── run.sh               # Easy run script
+├── run.sh               # Main script to run the container
 ├── input/               # Put video files here
 ├── output/              # Results saved here
 └── logs/                # Log files

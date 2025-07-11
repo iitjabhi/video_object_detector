@@ -658,18 +658,13 @@ class VideoProcessor:
 def main():
     """Main entry point with simplified argument parsing.
     
-    This handles command line arguments and kicks off the processing.
-    Supports both video files and pre-extracted frame directories.
+    Auto-detects whether input is a video file or frames directory.
     """
     parser = argparse.ArgumentParser(description="Simple Video Processing Pipeline")
     
-    # Input source (mutually exclusive)
-    input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument("--video", help="Path to input video file")
-    input_group.add_argument("--frames", help="Path to directory containing extracted frames")
-    
-    # Required arguments
-    parser.add_argument("output_dir", help="Output directory for results")
+    # Simple positional arguments
+    parser.add_argument("input_path", help="Path to video file or frames directory")
+    parser.add_argument("output_dir", nargs="?", default="output", help="Output directory (default: output)")
     
     # Optional arguments
     parser.add_argument("--model", default="yolov8n.pt", help="YOLO model name (default: yolov8n.pt)")
@@ -678,17 +673,19 @@ def main():
     parser.add_argument("--max-workers", type=int, default=2, help="Number of parallel workers (default: 2)")
     parser.add_argument("--disable-frame-skipping", action="store_true", help="Disable similar frame skipping (video mode only)")
     
-    parser.add_argument("legacy_video", nargs="?", help=argparse.SUPPRESS)
-    
     args = parser.parse_args()
     
-    # Handle default video input: python video_pipeline.py video.mp4 output/
-    if args.legacy_video and not args.video and not args.frames:
-        args.video = args.legacy_video
-    
-    # Validate input
-    if not args.video and not args.frames:
-        parser.error("Must specify either --video or --frames")
+    # Auto-detect if input is video file or frames directory
+    if os.path.isfile(args.input_path):
+        # It's a video file
+        input_type = "video"
+        print(f"Processing video: {args.input_path}")
+    elif os.path.isdir(args.input_path):
+        # It's a frames directory
+        input_type = "frames"
+        print(f"Processing pre-extracted frames from: {args.input_path}")
+    else:
+        parser.error(f"Input path does not exist: {args.input_path}")
     
     # Create processor
     processor = VideoProcessor(
@@ -698,20 +695,18 @@ def main():
     )
     
     try:
-        if args.frames:
+        if input_type == "frames":
             # Frame-based processing (fast CI mode)
-            print(f"Processing pre-extracted frames from: {args.frames}")
             results = processor.process_frames_directory(
-                frames_dir=args.frames,
+                frames_dir=args.input_path,
                 output_dir=args.output_dir,
                 model_name=args.model
             )
             print(f"Results: {results['extracted_images']} frames, {results['total_detections']} detections")
         else:
             # Video-based processing
-            print(f"Processing video: {args.video}")
             processor.process_video(
-                video_path=args.video,
+                video_path=args.input_path,
                 output_dir=args.output_dir,
                 model_name=args.model,
                 frame_step=args.frame_step

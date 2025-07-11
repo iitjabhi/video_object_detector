@@ -81,7 +81,7 @@ jobs:
     - name: Run frame-based processing pipeline
       run: |
         echo "Running frame-based processing pipeline..."
-        python video_pipeline.py --frames golden_output/frames ci_output --client-id github-actions-ci
+        python video_pipeline.py golden_output/frames ci_output --client-id github-actions-ci
     
     - name: Validate pipeline output
       run: |
@@ -89,7 +89,7 @@ jobs:
         python validate_ci_output.py ci_output
     
     - name: Upload pipeline artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: pipeline-output-${{ github.sha }}

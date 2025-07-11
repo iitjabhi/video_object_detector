@@ -13,9 +13,113 @@ import tempfile
 import shutil
 import cv2
 import numpy as np
+import argparse
+import sys
 from unittest.mock import Mock, patch, MagicMock
 
 from video_pipeline import VideoProcessor
+
+
+class TestArgumentParsing:
+    """Test command-line argument parsing functionality."""
+    
+    def create_mock_parser(self):
+        """Create a parser with the same structure as the main function."""
+        parser = argparse.ArgumentParser(description="Simple Video Processing Pipeline")
+        
+        # Simple positional arguments
+        parser.add_argument("input_path", help="Path to video file or frames directory")
+        parser.add_argument("output_dir", nargs="?", default="output", help="Output directory (default: output)")
+        
+        # Optional arguments
+        parser.add_argument("--model", default="yolov8n.pt", help="YOLO model name (default: yolov8n.pt)")
+        parser.add_argument("--frame-step", type=int, default=30, help="Extract every N frames (default: 30, video mode only)")
+        parser.add_argument("--client-id", default="default", help="Client identifier (default: default)")
+        parser.add_argument("--max-workers", type=int, default=2, help="Number of parallel workers (default: 2)")
+        parser.add_argument("--disable-frame-skipping", action="store_true", help="Disable similar frame skipping (video mode only)")
+        
+        return parser
+    
+    def parse_and_process_args(self, args_list):
+        """Parse arguments and apply the same logic as main function."""
+        parser = self.create_mock_parser()
+        args = parser.parse_args(args_list)
+        
+        # Auto-detect logic would happen here in real code
+        # For tests, we just return the parsed args
+        return args
+    
+    def test_basic_video_format(self):
+        """Test basic format: video.mp4 output/"""
+        args = self.parse_and_process_args(['test_video.mp4', 'test_output'])
+        
+        assert args.input_path == 'test_video.mp4'
+        assert args.output_dir == 'test_output'
+        assert args.model == 'yolov8n.pt'  # default
+        assert args.client_id == 'default'  # default
+    
+    def test_video_with_options(self):
+        """Test video with additional options."""
+        args = self.parse_and_process_args([
+            'my_video.mp4', 'results', 
+            '--model', 'yolov8s.pt', 
+            '--client-id', 'test-client',
+            '--frame-step', '60'
+        ])
+        
+        assert args.input_path == 'my_video.mp4'
+        assert args.output_dir == 'results'
+        assert args.model == 'yolov8s.pt'
+        assert args.client_id == 'test-client'
+        assert args.frame_step == 60
+    
+    def test_frames_directory_format(self):
+        """Test frames directory format: frames/ output/"""
+        args = self.parse_and_process_args(['golden_output/frames', 'ci_output'])
+        
+        assert args.input_path == 'golden_output/frames'
+        assert args.output_dir == 'ci_output'
+    
+    def test_frames_with_options(self):
+        """Test frames directory with options."""
+        args = self.parse_and_process_args([
+            'golden_output/frames', 'ci_output',
+            '--client-id', 'github-actions-ci',
+            '--model', 'yolov8n.pt'
+        ])
+        
+        assert args.input_path == 'golden_output/frames'
+        assert args.output_dir == 'ci_output'
+        assert args.client_id == 'github-actions-ci'
+        assert args.model == 'yolov8n.pt'
+    
+    def test_full_path_video(self):
+        """Test full path to video file."""
+        args = self.parse_and_process_args(['/path/to/video.mp4', '/path/to/output'])
+        
+        assert args.input_path == '/path/to/video.mp4'
+        assert args.output_dir == '/path/to/output'
+    
+    def test_relative_path_video(self):
+        """Test relative path to video file."""
+        args = self.parse_and_process_args(['../videos/test.mp4', './results'])
+        
+        assert args.input_path == '../videos/test.mp4'
+        assert args.output_dir == './results'
+    
+    def test_optional_output_directory(self):
+        """Test optional output directory defaults to 'output'."""
+        args = self.parse_and_process_args(['test_video.mp4'])
+        
+        assert args.input_path == 'test_video.mp4'
+        assert args.output_dir == 'output'  # Default value
+    
+    def test_error_missing_input_path(self):
+        """Test error when input path is missing."""
+        parser = self.create_mock_parser()
+        
+        with pytest.raises(SystemExit):
+            parser.parse_args([])  # Missing all arguments
 
 
 class TestVideoProcessor:

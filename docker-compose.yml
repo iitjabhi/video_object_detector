@@ -15,8 +15,9 @@ services:
       # Optional environment variables
       - CLIENT_ID=default
       - MAX_WORKERS=2
-    # Override the default command to process a video
+    # Override the default command to process a video or frames
     # Usage: docker-compose run video-processor /app/input/your_video.mp4 /app/output
+    # Usage: docker-compose run video-processor /app/input/frames/ /app/output
     command: ["--help"]
     
   # Example service for processing a specific video
