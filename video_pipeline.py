@@ -38,7 +38,7 @@ class SimpleVideoProcessor:
         # Setup simple logging
         self.setup_logging()
         
-        # Track comprehensive metrics
+        # Track metrics
         self.metrics = {
             'total_frames': 0,
             'processed_frames': 0,
@@ -403,7 +403,7 @@ class SimpleVideoProcessor:
         self.logger.info("=== End Summary ===")
     
     def generate_report(self, output_dir, video_path):
-        """Generate HTML and Markdown reports with processing statistics."""
+        """Generate Markdown report with processing statistics."""
         self.logger.info("📊 Generating processing report...")
         
         # Calculate processing time
@@ -431,105 +431,16 @@ class SimpleVideoProcessor:
             'stage_times': self.metrics['stage_times']
         }
         
-        # Generate HTML report
-        html_report = self._generate_html_report(report_data)
-        html_path = os.path.join(output_dir, "processing_report.html")
-        with open(html_path, 'w') as f:
-            f.write(html_report)
-        
         # Generate Markdown report
         md_report = self._generate_markdown_report(report_data)
         md_path = os.path.join(output_dir, "processing_report.md")
         with open(md_path, 'w') as f:
             f.write(md_report)
         
-        self.logger.info(f"📄 Reports generated: {html_path}, {md_path}")
-        return html_path, md_path
+        self.logger.info(f"📄 Report generated: {md_path}")
+        return md_path
     
-    def _generate_html_report(self, data):
-        """Generate HTML report."""
-        html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <title>Video Processing Report - {data['client_id']}</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }}
-        .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-        h1 {{ color: #333; border-bottom: 2px solid #007acc; padding-bottom: 10px; }}
-        .metric-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }}
-        .metric-card {{ background: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 4px solid #007acc; }}
-        .metric-value {{ font-size: 24px; font-weight: bold; color: #007acc; }}
-        .metric-label {{ color: #666; margin-top: 5px; }}
-        table {{ width: 100%; border-collapse: collapse; margin: 15px 0; }}
-        th, td {{ padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }}
-        th {{ background-color: #f8f9fa; color: #333; }}
-        .success {{ color: #28a745; }}
-        .warning {{ color: #ffc107; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🎬 Video Processing Report</h1>
-        
-        <div class="metric-grid">
-            <div class="metric-card">
-                <div class="metric-value">{data['total_frames']}</div>
-                <div class="metric-label">Total Video Frames</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{data['extracted_images']}</div>
-                <div class="metric-label">Images Extracted</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{data['total_detections']}</div>
-                <div class="metric-label">Total Detections</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">{data['avg_detections_per_frame']}</div>
-                <div class="metric-label">Avg Detections/Frame</div>
-            </div>
-        </div>
-        
-        <h2>📋 Processing Summary</h2>
-        <table>
-            <tr><th>Metric</th><th>Value</th></tr>
-            <tr><td>Video Path</td><td>{data['video_path']}</td></tr>
-            <tr><td>Client ID</td><td>{data['client_id']}</td></tr>
-            <tr><td>Processing Time</td><td>{data['processing_time']}</td></tr>
-            <tr><td>Frame Drop Ratio</td><td>{data['frame_drop_ratio']}</td></tr>
-            <tr><td>Skipped Frames</td><td>{data['skipped_frames']}</td></tr>
-            <tr><td>Max Detections/Frame</td><td>{data['max_detections_per_frame']}</td></tr>
-        </table>
-        
-        <h2>🏷️ Class Distribution</h2>
-        <table>
-            <tr><th>Object Class</th><th>Detection Count</th><th>Percentage</th></tr>"""
-        
-        total_detections = sum(data['class_distribution'].values())
-        for class_name, count in sorted(data['class_distribution'].items(), key=lambda x: x[1], reverse=True):
-            percentage = (count / total_detections * 100) if total_detections > 0 else 0
-            html += f"<tr><td>{class_name}</td><td>{count}</td><td>{percentage:.1f}%</td></tr>"
-        
-        html += f"""
-        </table>
-        
-        <h2>⏱️ Processing Stage Times</h2>
-        <table>
-            <tr><th>Stage</th><th>Time (seconds)</th><th>Percentage</th></tr>
-            <tr><td>Frame Extraction</td><td>{data['stage_times']['frame_extraction']:.1f}s</td><td>{(data['stage_times']['frame_extraction']/data['stage_times']['total_processing']*100):.1f}%</td></tr>
-            <tr><td>Object Detection</td><td>{data['stage_times']['object_detection']:.1f}s</td><td>{(data['stage_times']['object_detection']/data['stage_times']['total_processing']*100):.1f}%</td></tr>
-            <tr><td>Output Validation</td><td>{data['stage_times']['output_validation']:.1f}s</td><td>{(data['stage_times']['output_validation']/data['stage_times']['total_processing']*100):.1f}%</td></tr>
-            <tr><td><strong>Total Processing</strong></td><td><strong>{data['stage_times']['total_processing']:.1f}s</strong></td><td><strong>100%</strong></td></tr>
-        </table>
-        
-        <p style="color: #666; font-size: 12px; margin-top: 30px;">
-            Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} by Simple Video Processing Pipeline
-        </p>
-    </div>
-</body>
-</html>"""
-        return html
-    
+
     def _generate_markdown_report(self, data):
         """Generate Markdown report."""
         md = f"""# 🎬 Video Processing Report
@@ -577,7 +488,7 @@ class SimpleVideoProcessor:
 - **Frame Drop Ratio:** {data['frame_drop_ratio']} (lower is better)
 
 ---
-*Generated by Simple Video Processing Pipeline*
+*Generated by Video Processing Pipeline*
 """
         return md
 
@@ -595,7 +506,7 @@ class SimpleVideoProcessor:
             # Step 1: Load model
             self.load_model(model_name)
             
-            # Step 2: Extract frames (with timing)
+            # Step 2: Extract frames
             frame_start = time.time()
             num_frames = self.extract_frames(video_path, temp_frames_dir, frame_step)
             self.metrics['stage_times']['frame_extraction'] = time.time() - frame_start
@@ -603,13 +514,13 @@ class SimpleVideoProcessor:
             if num_frames == 0:
                 raise Exception("No frames extracted from video")
             
-            # Step 3: Detect objects (with timing)
+            # Step 3: Detect objects
             detection_start = time.time()
             output_file = os.path.join(output_dir, "detections.json")
             self.detect_objects(temp_frames_dir, output_file)
             self.metrics['stage_times']['object_detection'] = time.time() - detection_start
             
-            # Step 4: Validate outputs (with timing)
+            # Step 4: Validate output
             validation_start = time.time()
             validation_passed = self.validate_outputs(output_dir, temp_frames_dir)
             self.metrics['stage_times']['output_validation'] = time.time() - validation_start

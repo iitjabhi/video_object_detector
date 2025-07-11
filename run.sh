@@ -43,8 +43,7 @@ if [ $? -eq 0 ]; then
     echo "✅ Video processing completed successfully!"
     echo "📄 Check the output directory for results:"
     echo "   - detections.json (COCO format detections)"
-    echo "   - processing_report.html (visual report - open in browser)"
-    echo "   - processing_report.md (text report for documentation)"
+    echo "   - processing_report.md (comprehensive analysis report)"
     echo "📋 Check the logs directory for detailed logs"
 else
     echo "❌ Video processing failed!"

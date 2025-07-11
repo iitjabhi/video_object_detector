@@ -11,7 +11,7 @@ A learner-friendly video processing pipeline that extracts frames from videos an
 - **Docker Support**: Easy containerized deployment
 - **COCO Format Output**: Standard object detection format
 - **Data Observability**: Comprehensive metrics tracking and reporting
-- **HTML/Markdown Reports**: Beautiful reports with stats and breakdowns
+- **Markdown Reports**: Detailed reports with stats and breakdowns
 
 ## Quick Start
 
@@ -102,8 +102,7 @@ Options:
 
 The pipeline creates:
 - `output/detections.json` - Object detection results in COCO format
-- `output/processing_report.html` - Comprehensive HTML report with stats and visualizations
-- `output/processing_report.md` - Markdown report for documentation
+- `output/processing_report.md` - Comprehensive report with stats and analysis
 - `logs/<client_id>/pipeline.log` - Processing logs
 
 ### Output Validation
@@ -140,22 +139,18 @@ The pipeline automatically tracks comprehensive metrics and generates detailed r
 - **Processing time breakdown** by pipeline stage
 - **Performance statistics** (avg/max detections per frame)
 
-### 📄 Generated Reports
-After processing, find these reports in your output directory:
-
-**HTML Report (`processing_report.html`)**
-- Beautiful visual report with charts and tables
-- Open in any web browser
-- Perfect for sharing with stakeholders
+### 📄 Generated Report
+After processing, find this report in your output directory:
 
 **Markdown Report (`processing_report.md`)**
-- Text-based report for documentation
-- Easy to include in project docs
+- Comprehensive text-based report with all statistics
+- Easy to read and include in project documentation
 - Version control friendly
+- Contains all metrics, class distribution, and timing analysis
 
 ### 📈 Report Contents
-- **Key metrics overview** with visual cards
-- **Dataset statistics** (frame counts, detection totals)
+- **Key metrics overview** with processing statistics
+- **Dataset statistics** (frame counts, detection totals)  
 - **Object class distribution** with percentages
 - **Processing stage timing** breakdown
 - **Performance analysis** and frame drop statistics
@@ -260,6 +255,3 @@ docker run --rm simple-video-pipeline:latest pytest test_video_pipeline.py -v
 - 2GB+ RAM
 - GPU recommended but not required
 
-## License
-
-This is a learning project - feel free to modify and experiment! 

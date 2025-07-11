@@ -226,8 +226,12 @@ class TestSimpleVideoProcessor:
         assert result is False
     
     @patch('cv2.VideoCapture')
-    def test_extract_frames_basic(self, mock_video_capture):
+    @patch('os.path.exists')
+    def test_extract_frames_basic(self, mock_path_exists, mock_video_capture):
         """Test basic frame extraction functionality."""
+        # Mock file existence check
+        mock_path_exists.return_value = True
+        
         # Mock video capture
         mock_cap = MagicMock()
         mock_video_capture.return_value = mock_cap
@@ -259,6 +263,8 @@ class TestSimpleVideoProcessor:
         assert num_frames >= 0  # Basic check that it doesn't crash
         mock_cap.isOpened.assert_called_once()
         mock_cap.release.assert_called_once()
+        # Verify that os.path.exists was called (it gets called multiple times for dirs and file)
+        assert mock_path_exists.called
     
     def test_cleanup(self):
         """Test cleanup functionality."""
@@ -306,15 +312,24 @@ class TestStandaloneFunctions:
         # Check initial metrics
         assert 'total_frames' in processor.metrics
         assert 'processed_frames' in processor.metrics
+        assert 'extracted_images' in processor.metrics
         assert 'skipped_frames' in processor.metrics
         assert 'total_detections' in processor.metrics
+        assert 'detections_per_frame' in processor.metrics
+        assert 'class_distribution' in processor.metrics
+        assert 'frame_drop_ratio' in processor.metrics
+        assert 'stage_times' in processor.metrics
         assert 'start_time' in processor.metrics
         
-        # Initial values should be 0
+        # Initial values should be 0 or empty
         assert processor.metrics['total_frames'] == 0
         assert processor.metrics['processed_frames'] == 0
+        assert processor.metrics['extracted_images'] == 0
         assert processor.metrics['skipped_frames'] == 0
         assert processor.metrics['total_detections'] == 0
+        assert processor.metrics['detections_per_frame'] == []
+        assert processor.metrics['class_distribution'] == {}
+        assert processor.metrics['frame_drop_ratio'] == 0.0
 
 
 # Integration test using pytest fixtures
