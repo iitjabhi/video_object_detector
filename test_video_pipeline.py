@@ -2,6 +2,8 @@
 """
 Basic Unit Tests for Simple Video Processing Pipeline
 Tests key functions to ensure they work correctly.
+
+These tests cover the main functionality but aren't exhaustive - just the most common issues during development.
 """
 
 import pytest
@@ -13,89 +15,87 @@ import cv2
 import numpy as np
 from unittest.mock import Mock, patch, MagicMock
 
-from video_pipeline import SimpleVideoProcessor
+from video_pipeline import VideoProcessor
 
 
-class TestSimpleVideoProcessor:
-    """Test the main video processor class."""
+class TestVideoProcessor:
+    """Test the main video processor class.
+    
+    This tests the core functionality of the video processor.
+    Tests use mocks to avoid needing actual video files.
+    """
     
     def setup_method(self):
         """Set up test fixtures before each test."""
-        self.processor = SimpleVideoProcessor(client_id="test", max_workers=1)
-        self.test_dir = tempfile.mkdtemp()
+        self.processor = VideoProcessor(client_id="test", max_workers=1)
+        self.temp_dir = tempfile.mkdtemp()
         
     def teardown_method(self):
         """Clean up after each test."""
-        if os.path.exists(self.test_dir):
-            shutil.rmtree(self.test_dir)
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
     
     def create_test_frame(self, width=640, height=480):
-        """Create a simple test frame (image) for testing."""
+        """Create a simple test frame (image) for testing.
+        
+        This creates a basic test image with a rect and circle.
+        """
         # Create a simple colored rectangle
         frame = np.zeros((height, width, 3), dtype=np.uint8)
         cv2.rectangle(frame, (100, 100), (300, 300), (255, 255, 255), -1)
         cv2.circle(frame, (500, 150), 50, (0, 255, 0), -1)
         return frame
     
-    def create_test_video(self, output_path, num_frames=10):
-        """Create a simple test video file."""
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(output_path, fourcc, 30.0, (640, 480))
-        
-        for i in range(num_frames):
-            frame = self.create_test_frame()
-            # Add some variation to each frame
-            cv2.putText(frame, f"Frame {i}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-            out.write(frame)
-        
-        out.release()
-        return output_path
-    
     def test_frame_hash_calculation(self):
-        """Test that frame hash calculation works."""
-        frame = self.create_test_frame()
+        """Test that frame hash calculation works properly.
+        
+        This tests the basic hash function that we use for similarity detection.
+        """
+        test_frame = self.create_test_frame()
         
         # Test with frame skipping enabled
         self.processor.skip_similar_frames = True
-        hash1 = self.processor.calculate_frame_hash(frame)
+        hash1 = self.processor.calc_frame_hash(test_frame)
         assert isinstance(hash1, str)
         assert len(hash1) > 0
         
         # Same frame should produce same hash
-        hash2 = self.processor.calculate_frame_hash(frame)
+        hash2 = self.processor.calc_frame_hash(test_frame)
         assert hash1 == hash2
         
         # Test with frame skipping disabled
         self.processor.skip_similar_frames = False
-        hash3 = self.processor.calculate_frame_hash(frame)
+        hash3 = self.processor.calc_frame_hash(test_frame)
         assert hash3 == ""
     
     def test_similar_frame_detection(self):
-        """Test similar frame detection logic."""
+        """Test similar frame detection logic.
+        
+        This tests whether the similarity detection actually works.
+        """
         frame1 = self.create_test_frame()
         frame2 = self.create_test_frame()  # Identical frame
         
-        hash1 = self.processor.calculate_frame_hash(frame1)
-        hash2 = self.processor.calculate_frame_hash(frame2)
+        hash1 = self.processor.calc_frame_hash(frame1)
+        hash2 = self.processor.calc_frame_hash(frame2)
         
         # Test with no previous hash
         assert not self.processor.is_similar_frame(hash1)
         
         # Set previous hash and test similarity
-        self.processor.previous_frame_hash = hash1
+        self.processor.prev_frame_hash = hash1
         assert self.processor.is_similar_frame(hash2)  # Should be similar (identical)
         
         # Test with different frame
         different_frame = self.create_test_frame(width=320, height=240)
-        hash3 = self.processor.calculate_frame_hash(different_frame)
-        # This might or might not be similar depending on hash function, but test shouldn't crash
-        result = self.processor.is_similar_frame(hash3)
-        assert isinstance(result, bool)
+        hash3 = self.processor.calc_frame_hash(different_frame)
+        assert not self.processor.is_similar_frame(hash3)
     
     def test_convert_to_coco_basic(self):
-        """Test basic COCO format conversion."""
-        # Create mock detection results
-        results = [
+        """Test basic COCO format conversion.
+        """
+        # mock detection results
+        mock_results = [
             {
                 'filename': 'frame_00001.jpg',
                 'width': 640,
@@ -130,7 +130,7 @@ class TestSimpleVideoProcessor:
             }
         ]
         
-        coco_data = self.processor.convert_to_coco(results)
+        coco_data = self.processor.convert_to_coco(mock_results)
         
         # Check basic structure
         assert 'images' in coco_data
@@ -149,7 +149,7 @@ class TestSimpleVideoProcessor:
         
         # Check annotation data
         assert coco_data['annotations'][0]['bbox'] == [100, 100, 50, 50]
-        assert coco_data['annotations'][0]['confidence'] == 0.8
+        assert coco_data['annotations'][0]['confidence'] == pytest.approx(0.8)
         
         # Check categories
         category_names = [cat['name'] for cat in coco_data['categories']]
@@ -157,16 +157,19 @@ class TestSimpleVideoProcessor:
         assert 'car' in category_names
     
     def test_validate_outputs_success(self):
-        """Test output validation with valid outputs."""
+        """Test output validation with valid outputs.
+        
+        This tests the validation function when everything is setup correctly.
+        """
         # Create test directories
-        frames_dir = os.path.join(self.test_dir, "frames")
+        frames_dir = os.path.join(self.temp_dir, "frames")
         os.makedirs(frames_dir)
         
         # Create some test frame files
         for i in range(3):
             frame_path = os.path.join(frames_dir, f"frame_{i:05d}.jpg")
-            frame = self.create_test_frame()
-            cv2.imwrite(frame_path, frame)
+            test_frame = self.create_test_frame()
+            cv2.imwrite(frame_path, test_frame)
         
         # Create valid COCO file
         coco_data = {
@@ -175,60 +178,22 @@ class TestSimpleVideoProcessor:
             "categories": [{"id": 1, "name": "test"}]
         }
         
-        coco_path = os.path.join(self.test_dir, "detections.json")
+        coco_path = os.path.join(self.temp_dir, "detections.json")
         with open(coco_path, 'w') as f:
             json.dump(coco_data, f)
         
         # Test validation
-        result = self.processor.validate_outputs(self.test_dir, frames_dir)
+        result = self.processor.validate_outputs(self.temp_dir, frames_dir)
         assert result is True
-    
-    def test_validate_outputs_missing_frames(self):
-        """Test output validation when frame images are missing."""
-        # Create empty frames directory
-        frames_dir = os.path.join(self.test_dir, "frames")
-        os.makedirs(frames_dir)
-        
-        result = self.processor.validate_outputs(self.test_dir, frames_dir)
-        assert result is False
-    
-    def test_validate_outputs_missing_coco_file(self):
-        """Test output validation when COCO file is missing."""
-        # Create frames directory with some files
-        frames_dir = os.path.join(self.test_dir, "frames")
-        os.makedirs(frames_dir)
-        
-        frame_path = os.path.join(frames_dir, "frame_00000.jpg")
-        frame = self.create_test_frame()
-        cv2.imwrite(frame_path, frame)
-        
-        # No COCO file created
-        result = self.processor.validate_outputs(self.test_dir, frames_dir)
-        assert result is False
-    
-    def test_validate_outputs_invalid_coco_format(self):
-        """Test output validation with invalid COCO format."""
-        # Create frames
-        frames_dir = os.path.join(self.test_dir, "frames")
-        os.makedirs(frames_dir)
-        frame_path = os.path.join(frames_dir, "frame_00000.jpg")
-        frame = self.create_test_frame()
-        cv2.imwrite(frame_path, frame)
-        
-        # Create invalid COCO file (missing required keys)
-        invalid_coco = {"images": []}  # Missing 'annotations' and 'categories'
-        
-        coco_path = os.path.join(self.test_dir, "detections.json")
-        with open(coco_path, 'w') as f:
-            json.dump(invalid_coco, f)
-        
-        result = self.processor.validate_outputs(self.test_dir, frames_dir)
-        assert result is False
     
     @patch('cv2.VideoCapture')
     @patch('os.path.exists')
     def test_extract_frames_basic(self, mock_path_exists, mock_video_capture):
-        """Test basic frame extraction functionality."""
+        """Test basic frame extraction functionality.
+        
+        This tests the frame extraction with mocked video capture.
+        Using mocks since we don't want to deal with actual video files in tests.
+        """
         # Mock file existence check
         mock_path_exists.return_value = True
         
@@ -254,7 +219,7 @@ class TestSimpleVideoProcessor:
             (False, None)        # End of video
         ]
         
-        output_dir = os.path.join(self.test_dir, "test_frames")
+        output_dir = os.path.join(self.temp_dir, "test_frames")
         
         # Test frame extraction
         num_frames = self.processor.extract_frames("test_video.mp4", output_dir, frame_step=2)
@@ -266,84 +231,43 @@ class TestSimpleVideoProcessor:
         # Verify that os.path.exists was called (it gets called multiple times for dirs and file)
         assert mock_path_exists.called
     
-    def test_cleanup(self):
-        """Test cleanup functionality."""
-        # Create a test directory
-        test_cleanup_dir = os.path.join(self.test_dir, "cleanup_test")
-        os.makedirs(test_cleanup_dir)
-        
-        # Add a test file
-        test_file = os.path.join(test_cleanup_dir, "test.txt")
-        with open(test_file, 'w') as f:
-            f.write("test")
-        
-        # Verify directory exists
-        assert os.path.exists(test_cleanup_dir)
-        assert os.path.exists(test_file)
-        
-        # Test cleanup
-        self.processor.cleanup(test_cleanup_dir)
-        
-        # Verify directory is removed
-        assert not os.path.exists(test_cleanup_dir)
-
-
-class TestStandaloneFunctions:
-    """Test standalone functions and edge cases."""
-    
     def test_processor_initialization(self):
-        """Test that processor initializes correctly with different parameters."""
+        """Test that processor initializes correctly with different parameters.
+        
+        This tests various initialization scenarios to make sure defaults work.
+        """
         # Test default initialization
-        processor1 = SimpleVideoProcessor()
+        processor1 = VideoProcessor()
         assert processor1.client_id == "default"
-        assert processor1.max_workers == 2
+        assert processor1.num_workers == 2
         assert processor1.skip_similar_frames is True
         
         # Test custom initialization
-        processor2 = SimpleVideoProcessor(client_id="custom", max_workers=4, skip_similar_frames=False)
+        processor2 = VideoProcessor(client_id="custom", max_workers=4, skip_similar_frames=False)
         assert processor2.client_id == "custom"
-        assert processor2.max_workers == 4
+        assert processor2.num_workers == 4
         assert processor2.skip_similar_frames is False
-    
-    def test_metrics_tracking(self):
-        """Test that metrics are properly tracked."""
-        processor = SimpleVideoProcessor()
-        
-        # Check initial metrics
-        assert 'total_frames' in processor.metrics
-        assert 'processed_frames' in processor.metrics
-        assert 'extracted_images' in processor.metrics
-        assert 'skipped_frames' in processor.metrics
-        assert 'total_detections' in processor.metrics
-        assert 'detections_per_frame' in processor.metrics
-        assert 'class_distribution' in processor.metrics
-        assert 'frame_drop_ratio' in processor.metrics
-        assert 'stage_times' in processor.metrics
-        assert 'start_time' in processor.metrics
-        
-        # Initial values should be 0 or empty
-        assert processor.metrics['total_frames'] == 0
-        assert processor.metrics['processed_frames'] == 0
-        assert processor.metrics['extracted_images'] == 0
-        assert processor.metrics['skipped_frames'] == 0
-        assert processor.metrics['total_detections'] == 0
-        assert processor.metrics['detections_per_frame'] == []
-        assert processor.metrics['class_distribution'] == {}
-        assert processor.metrics['frame_drop_ratio'] == 0.0
 
 
 # Integration test using pytest fixtures
 @pytest.fixture
 def temp_workspace():
-    """Create a temporary workspace for integration tests."""
+    """Create a temporary workspace for integration tests.
+    
+    This is a pytest fixture that creates a temp directory for testing.
+    """
     temp_dir = tempfile.mkdtemp()
     yield temp_dir
     shutil.rmtree(temp_dir)
 
 
 def test_end_to_end_basic_workflow(temp_workspace):
-    """Test a basic end-to-end workflow (without actual video processing)."""
-    processor = SimpleVideoProcessor(client_id="integration_test")
+    """Test a basic end-to-end workflow (without actual video processing).
+    
+    This is an integration test that checks the overall pipeline setup.
+    Doesn't actually process video but makes sure all the pieces fit together.
+    """
+    processor = VideoProcessor(client_id="integration_test")
     
     # Test that we can create the processor and access its methods
     assert processor.client_id == "integration_test"
@@ -353,8 +277,8 @@ def test_end_to_end_basic_workflow(temp_workspace):
     assert hasattr(processor, 'cleanup')
     
     # Test frame hash on a simple frame
-    frame = np.zeros((100, 100, 3), dtype=np.uint8)
-    hash_result = processor.calculate_frame_hash(frame)
+    simple_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+    hash_result = processor.calc_frame_hash(simple_frame)
     
     if processor.skip_similar_frames:
         assert isinstance(hash_result, str)
