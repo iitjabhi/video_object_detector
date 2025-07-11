@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  video-processor:
+    build: .
+    image: simple-video-pipeline:latest
+    volumes:
+      # Mount input directory (put your videos here)
+      - ./input:/app/input
+      # Mount output directory (results will be saved here)
+      - ./output:/app/output
+      # Mount logs directory
+      - ./logs:/app/logs
+    environment:
+      # Optional environment variables
+      - CLIENT_ID=default
+      - MAX_WORKERS=2
+    # Override the default command to process a video
+    # Usage: docker-compose run video-processor /app/input/your_video.mp4 /app/output
+    command: ["--help"]
+    
+  # Example service for processing a specific video
+  process-video:
+    build: .
+    image: simple-video-pipeline:latest
+    volumes:
+      - ./input:/app/input
+      - ./output:/app/output
+      - ./logs:/app/logs
+    environment:
+      - CLIENT_ID=example
+    # This will process video.mp4 from the input directory
+    command: ["/app/input/video.mp4", "/app/output", "--model", "yolov8n.pt", "--frame-step", "30"] 
