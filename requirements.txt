@@ -1,5 +1,15 @@
-ultralytics>=8.0.0
-opencv-python>=4.5.0
-tqdm>=4.60.0
-pytest>=7.0.0
-numpy>=1.21.0 
+# Video Processing Pipeline Dependencies
+# Core dependencies with compatible versions
+
+# Core ML/CV dependencies
+numpy==1.26.4
+opencv-python==4.8.1.78
+torch==2.2.2
+torchvision==0.17.2
+ultralytics==8.3.164
+
+# Progress bars and utilities
+tqdm==4.66.5
+
+# Testing framework
+pytest==7.4.4 

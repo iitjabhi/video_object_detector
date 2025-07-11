@@ -1,0 +1,46 @@
+{
+  "images": [
+    {
+      "id": 1,
+      "file_name": "frame_00000.jpg",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": 2,
+      "file_name": "frame_00001.jpg", 
+      "width": 1920,
+      "height": 1080
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1,
+      "bbox": [100, 200, 150, 300],
+      "area": 45000,
+      "iscrowd": 0,
+      "confidence": 0.85
+    },
+    {
+      "id": 2,
+      "image_id": 2,
+      "category_id": 2,
+      "bbox": [300, 400, 200, 100],
+      "area": 20000,
+      "iscrowd": 0,
+      "confidence": 0.92
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "person"
+    },
+    {
+      "id": 2,
+      "name": "car"
+    }
+  ]
+} 

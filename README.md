@@ -1,17 +1,22 @@
-# Simple Video Processing Pipeline
+# YOLO Video Processing Pipeline
 
-A learner-friendly video processing pipeline that extracts frames from videos and performs object detection using YOLO. This is a simplified version focused on ease of understanding and use.
+![CI](https://github.com/iitjabhi/video_object_detector/workflows/Video%20Processing%20Pipeline%20CI/badge.svg)
+
+A video processing pipeline that extracts frames from videos and performs object detection using YOLO.
+
+Includes CI/CD pipeline with automated testing, dependency management, and golden reference validation.
 
 ## Features
 
 - **Simple Setup**: Easy to understand and modify
 - **Basic Parallel Processing**: Uses 2 workers by default
 - **Frame Similarity Detection**: Skips identical frames to save processing time
-- **Simple Logging**: Basic logging without complex formatters
 - **Docker Support**: Easy containerized deployment
 - **COCO Format Output**: Standard object detection format
 - **Data Observability**: Comprehensive metrics tracking and reporting
 - **Markdown Reports**: Detailed reports with stats and breakdowns
+- **CI/CD Pipeline**: Automated testing, security scans, and performance benchmarks
+- **Dependency Management**: Pinned versions for reproducible builds
 
 ## Quick Start
 
@@ -179,6 +184,32 @@ simple_video_pipeline/
 3. **Object Detection**: Runs YOLO model on each frame
 4. **Parallel Processing**: Processes frames in batches using multiple workers
 5. **Output Generation**: Saves results in COCO format
+
+## CI/CD Pipeline
+
+This project includes a comprehensive GitHub Actions workflow that provides:
+
+### 🧪 **Automated Testing**
+- **Unit Tests**: 7 comprehensive tests covering all functionality
+- **Integration Tests**: Full pipeline testing with output validation
+- **Environment Validation**: Dependency compatibility checks
+- **Docker Testing**: Container build and execution verification
+
+### 📋 **CI Documentation**
+- **[CI Guide](FRAME_BASED_CI.md)**: Complete CI/CD workflow documentation
+- **Golden Reference Data**: Automated output validation against known good results
+
+### 🚀 **Getting Started with CI**
+```bash
+# Validate your environment locally
+python validate_environment.py
+
+# Run all tests
+pytest test_video_pipeline.py -v
+
+# Check CI requirements
+pip install -r requirements.txt
+```
 
 ## Learner-Friendly Features
 

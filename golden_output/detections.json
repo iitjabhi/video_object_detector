@@ -1,0 +1,124 @@
+{
+  "images": [
+    {
+      "id": 1,
+      "file_name": "frame_00000.jpg",
+      "width": 1080,
+      "height": 608
+    },
+    {
+      "id": 2,
+      "file_name": "frame_00001.jpg",
+      "width": 1080,
+      "height": 608
+    },
+    {
+      "id": 3,
+      "file_name": "frame_00002.jpg",
+      "width": 1080,
+      "height": 608
+    },
+    {
+      "id": 4,
+      "file_name": "frame_00003.jpg",
+      "width": 1080,
+      "height": 608
+    },
+    {
+      "id": 5,
+      "file_name": "frame_00004.jpg",
+      "width": 1080,
+      "height": 608
+    },
+    {
+      "id": 6,
+      "file_name": "frame_00005.jpg",
+      "width": 1080,
+      "height": 608
+    },
+    {
+      "id": 7,
+      "file_name": "frame_00006.jpg",
+      "width": 1080,
+      "height": 608
+    },
+    {
+      "id": 8,
+      "file_name": "frame_00007.jpg",
+      "width": 1080,
+      "height": 608
+    },
+    {
+      "id": 9,
+      "file_name": "frame_00008.jpg",
+      "width": 1080,
+      "height": 608
+    },
+    {
+      "id": 10,
+      "file_name": "frame_00009.jpg",
+      "width": 1080,
+      "height": 608
+    },
+    {
+      "id": 11,
+      "file_name": "frame_00010.jpg",
+      "width": 1080,
+      "height": 608
+    }
+  ],
+  "annotations": [
+    {
+      "id": 1,
+      "image_id": 5,
+      "category_id": 1,
+      "bbox": [
+        481.2296447753906,
+        235.12362670898438,
+        91.63101196289062,
+        158.67916870117188
+      ],
+      "area": 14539.93280551862,
+      "iscrowd": 0,
+      "confidence": 0.6004124879837036
+    },
+    {
+      "id": 2,
+      "image_id": 7,
+      "category_id": 2,
+      "bbox": [
+        397.98919677734375,
+        377.5274353027344,
+        119.07611083984375,
+        100.2838134765625
+      ],
+      "area": 11941.406488977373,
+      "iscrowd": 0,
+      "confidence": 0.5995414853096008
+    },
+    {
+      "id": 3,
+      "image_id": 10,
+      "category_id": 2,
+      "bbox": [
+        484.48822021484375,
+        331.61883544921875,
+        68.410888671875,
+        75.51870727539062
+      ],
+      "area": 5166.301876060665,
+      "iscrowd": 0,
+      "confidence": 0.5713553428649902
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "train"
+    },
+    {
+      "id": 2,
+      "name": "car"
+    }
+  ]
+}

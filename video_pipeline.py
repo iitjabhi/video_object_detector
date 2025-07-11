@@ -530,6 +530,74 @@ class VideoProcessor:
 """
         return md
 
+    def process_frames_directory(self, frames_dir, output_dir, model_name="yolov8n.pt"):
+        """Process pre-extracted frames from a directory.
+        
+        This is optimized for CI testing where frames are already extracted.
+        Much faster than processing full videos.
+        """
+        try:
+            self.logger.info(f"Starting frame processing for client: {self.client_id}")
+            self.logger.info(f"Processing frames from: {frames_dir}")
+            
+            # Create output directory
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Step 1: Load model
+            self.load_model(model_name)
+            
+            # Step 2: Count frames (simulate frame extraction)
+            frame_start = time.time()
+            frame_files = sorted([f for f in os.listdir(frames_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
+            num_frames = len(frame_files)
+            
+            # Update stats as if we extracted them
+            self.stats['total_frames'] = num_frames  # In frames mode, this is the frame count
+            self.stats['extracted_images'] = num_frames
+            self.stats['skipped_frames'] = 0  # No skipping in frame mode
+            self.stats['frame_drop_ratio'] = 0.0
+            
+            self.stats['stage_times']['frame_extraction'] = time.time() - frame_start
+            
+            if num_frames == 0:
+                raise Exception("No frame files found in directory")
+            
+            self.logger.info(f"Found {num_frames} frames to process")
+            
+            # Step 3: Detect objects (use the existing frames directly)
+            detection_start = time.time()
+            output_file = os.path.join(output_dir, "detections.json")
+            self.detect_objects(frames_dir, output_file)
+            self.stats['stage_times']['object_detection'] = time.time() - detection_start
+            
+            # Step 4: Validate output
+            validation_start = time.time()
+            validation_passed = self.validate_outputs(output_dir, frames_dir)
+            self.stats['stage_times']['output_validation'] = time.time() - validation_start
+            
+            # Step 5: Generate reports
+            self.generate_report(output_dir, frames_dir)  # Pass frames_dir as "video_path"
+            
+            # Step 6: Log results
+            self.log_stats()
+            
+            if validation_passed:
+                self.logger.info("Frame processing completed successfully!")
+            else:
+                self.logger.warning("Processing completed but output validation failed")
+                self.logger.info("Check the logs above for specific validation issues")
+            
+            return {
+                'extracted_images': num_frames,
+                'total_detections': self.stats['total_detections'],
+                'processing_time': sum(self.stats['stage_times'].values()),
+                'validation_passed': validation_passed
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Frame processing failed: {e}")
+            raise
+
     def process_video(self, video_path, output_dir, model_name="yolov8n.pt", frame_step=30):
         """Main processing function - simplified workflow with comprehensive tracking.
         
@@ -591,22 +659,36 @@ def main():
     """Main entry point with simplified argument parsing.
     
     This handles command line arguments and kicks off the processing.
-    Pretty straightforward - just parses args and runs the pipeline.
+    Supports both video files and pre-extracted frame directories.
     """
     parser = argparse.ArgumentParser(description="Simple Video Processing Pipeline")
     
+    # Input source (mutually exclusive)
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument("--video", help="Path to input video file")
+    input_group.add_argument("--frames", help="Path to directory containing extracted frames")
+    
     # Required arguments
-    parser.add_argument("video_path", help="Path to input video file")
     parser.add_argument("output_dir", help="Output directory for results")
     
     # Optional arguments
     parser.add_argument("--model", default="yolov8n.pt", help="YOLO model name (default: yolov8n.pt)")
-    parser.add_argument("--frame-step", type=int, default=30, help="Extract every N frames (default: 30)")
+    parser.add_argument("--frame-step", type=int, default=30, help="Extract every N frames (default: 30, video mode only)")
     parser.add_argument("--client-id", default="default", help="Client identifier (default: default)")
     parser.add_argument("--max-workers", type=int, default=2, help="Number of parallel workers (default: 2)")
-    parser.add_argument("--disable-frame-skipping", action="store_true", help="Disable similar frame skipping")
+    parser.add_argument("--disable-frame-skipping", action="store_true", help="Disable similar frame skipping (video mode only)")
+    
+    parser.add_argument("legacy_video", nargs="?", help=argparse.SUPPRESS)
     
     args = parser.parse_args()
+    
+    # Handle default video input: python video_pipeline.py video.mp4 output/
+    if args.legacy_video and not args.video and not args.frames:
+        args.video = args.legacy_video
+    
+    # Validate input
+    if not args.video and not args.frames:
+        parser.error("Must specify either --video or --frames")
     
     # Create processor
     processor = VideoProcessor(
@@ -616,12 +698,24 @@ def main():
     )
     
     try:
-        processor.process_video(
-            video_path=args.video_path,
-            output_dir=args.output_dir,
-            model_name=args.model,
-            frame_step=args.frame_step
-        )
+        if args.frames:
+            # Frame-based processing (fast CI mode)
+            print(f"Processing pre-extracted frames from: {args.frames}")
+            results = processor.process_frames_directory(
+                frames_dir=args.frames,
+                output_dir=args.output_dir,
+                model_name=args.model
+            )
+            print(f"Results: {results['extracted_images']} frames, {results['total_detections']} detections")
+        else:
+            # Video-based processing
+            print(f"Processing video: {args.video}")
+            processor.process_video(
+                video_path=args.video,
+                output_dir=args.output_dir,
+                model_name=args.model,
+                frame_step=args.frame_step
+            )
         
         print("Processing completed successfully!")
         return 0

@@ -1,0 +1,36 @@
+{
+  "test_video": "timelapse_test.MP4",
+  "expected_metrics": {
+    "total_frames": 4077,
+    "extracted_images_min": 11,
+    "extracted_images_max": 11,
+    "frame_step": 407,
+    "processing_time_max_seconds": 60,
+    "detections_min": 1,
+    "detections_max": 10
+  },
+  "required_files": [
+    "detections.json",
+    "processing_report.md"
+  ],
+  "coco_structure": {
+    "required_keys": ["images", "annotations", "categories"],
+    "images_min_count": 11,
+    "annotations_min_count": 1,
+    "categories_min_count": 1
+  },
+  "expected_classes": [
+    "car",
+    "train",
+    "person",
+    "truck",
+    "bus"
+  ],
+  "validation_criteria": {
+    "frame_extraction_success": true,
+    "valid_coco_format": true,
+    "processing_report_generated": true,
+    "detections_found": true,
+    "no_critical_errors": true
+  }
+} 
