@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Production Video Processing Pipeline - Object Detection with YOLO
+Video Processing Pipeline - Object Detection with YOLO
 Extracts frames from video and performs object detection, outputting COCO-format annotations.
 
-Some parts could probably be optimized but works for most basic use cases.
 """
 
 import cv2
